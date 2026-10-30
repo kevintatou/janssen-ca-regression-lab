@@ -1,24 +1,55 @@
-# Janssen upstream PR candidate: CIBA ping HTTP client lifecycle and hostname verification
+# Janssen upstream PR: CIBA ping HTTP client lifecycle and hostname verification
 
-Source revision: 95f2eebb4bf725eae9415c5a8c69815dd92d4c80.
+Source revision investigated: 95f2eebb4bf725eae9415c5a8c69815dd92d4c80.
 
-## Reproducible code path
+**Status: confirmed, fixed, and submitted upstream.**
+- jans-auth-server PR: https://github.com/JanssenProject/jans/pull/15552
+- jans-lock (identical copy) PR: https://github.com/JanssenProject/jans/pull/15553
+- Reproduction CI (this lab): https://github.com/kevintatou/janssen-ca-regression-lab/pull/1
 
-- `PingCallbackClient.getApacheHttpClient4ExecutorForMTLS()` calls `ClientUtil.createHttpClient("TLSv1.2", ciphers)`.
-- `ClientUtil.createHttpClient()` constructs `SSLConnectionSocketFactory` with `NoopHostnameVerifier.INSTANCE`.
-- It also creates `PoolingHttpClientConnectionManager` in a try-with-resources block and returns an HTTP client backed by that manager. The manager is closed when the method returns.
+## Confirmed code path
 
-## Proposed narrowly scoped upstream change
+- `PingCallbackClient.getApacheHttpClient4ExecutorForMTLS()` calls `ClientUtil.createHttpClient("TLSv1.2", ciphers)` when `fapiCompatibility` (FAPI CIBA) is enabled.
+- `ClientUtil.createHttpClient()` built `SSLConnectionSocketFactory` with `NoopHostnameVerifier.INSTANCE`.
+- It created `PoolingHttpClientConnectionManager` in a try-with-resources block and returned an HTTP client backed by that (now closed) manager.
 
-1. Use `DefaultHostnameVerifier` (or the library default) in the custom TLS socket factory.
-2. Keep the connection manager alive until the returned HTTP client is closed; do not close it in the factory method.
-3. Add a regression test for a valid local TLS certificate, a hostname mismatch, and an untrusted certificate. Verify the client can make a request after factory return.
-4. Confirm the CIBA ping callback and FAPI mTLS behavior with maintainers before changing production semantics.
+## Confirmed behavior (loopback only, synthetic certs)
+
+Drove the real upstream method against loopback HTTPS servers. No production systems contacted.
+
+| Scenario | Before fix | After fix |
+|---|---|---|
+| Client executes a request after factory returns | `IllegalStateException: Connection pool shut down` | HTTP 200 |
+| Server cert for a different host (`wronghost.example`) | Accepted (HTTP 200) via `NoopHostnameVerifier` | Rejected (`SSLPeerUnverifiedException`) |
+| Untrusted self-signed cert | (masked by lifecycle defect) | Rejected (`SSLHandshakeException`) |
+
+Origin of the lifecycle defect: a static-analysis (Sonar) auto-fix (`df29842513`) wrapped the
+previously correct manager in try-with-resources. The hostname defect is original to the method.
+
+## Fix applied
+
+1. Use `DefaultHostnameVerifier` in the custom TLS socket factory (hostname verification enforced).
+2. Keep the connection manager alive; its lifecycle is owned by the returned `CloseableHttpClient`.
+3. Add `ClientUtilHttpClientTlsTest` (TestNG) covering valid cert, hostname mismatch, untrusted
+   cert, and returned-client usability. The same tests fail against the unfixed code with
+   `Connection pool shut down`.
+4. TLS version and cipher restrictions (FAPI-CIBA) preserved unchanged.
+
+## Test results
+
+- Maven Surefire (`jans-auth-client`): new tests `Tests run: 3, Failures: 0, Errors: 0`; existing
+  `io.jans.as.client.util.*Test` suites pass (8 tests). Full `test-compile` clean.
+- Upstream CI on the PR is in `action_required` state (first-time-contributor approval needed);
+  DCO and Snyk checks pass.
+
+## Security characterization
+
+The hostname-verification defect is a hardening gap reachable only via the FAPI-CIBA
+ping-callback path, and is currently masked by the lifecycle defect (the client fails before any
+TLS handshake). This is reported as a correctness fix plus TLS hardening, not as a demonstrated
+in-the-wild exploit. Coordinate any stronger security claim through security@jans.io.
 
 ## Separate investigation
 
-`BaseHttpService.getHttpsClientTrustAll()` explicitly disables certificate and hostname validation. GitHub code search found no production call site outside its declaration and a config-api test utility at the time of inspection. Treat as a separate API hardening discussion, not an established production vulnerability.
-
-## Scope and safety
-
-Do not use production hosts or private company configurations. This is a review proposal, not a tested upstream patch. Avoid reporting exploitability until reachability and integration tests are demonstrated.
+`BaseHttpService.getHttpsClientTrustAll()` explicitly disables certificate and hostname validation.
+Treat as a separate API hardening discussion, not an established production vulnerability.
