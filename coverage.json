@@ -1,0 +1,26 @@
+{
+  "incident": "2026-10-eMudhra-intermediate-compromise",
+  "note": "Six live endpoints are examples, not eight distinct intermediate keys. No unverified fixture is counted as covered.",
+  "affected_intermediates": [
+    {"id":"dv-g3b","live_fixture":"https://dv-g3b-emudhra.we-have-a-problem.com/"},
+    {"id":"ov-g3b","live_fixture":null},
+    {"id":"ev-g3b","live_fixture":"https://ev-g3b-emudhra.we-have-a-problem.com/"},
+    {"id":"cs-g3b","live_fixture":null},
+    {"id":"dv-g3c","live_fixture":null},
+    {"id":"ov-g3c","live_fixture":"https://ov-g3c-emudhra.we-have-a-problem.com/"},
+    {"id":"ev-g3c","live_fixture":null},
+    {"id":"cs-g3c","live_fixture":null}
+  ],
+  "cross_sign_examples": [
+    "https://dv-g3b-aaa-emudhra.we-have-a-problem.com/",
+    "https://ov-g3c-aaa-emudhra.we-have-a-problem.com/",
+    "https://ev-g3b-aaa-emudhra.we-have-a-problem.com/"
+  ],
+  "unverified_dimensions": [
+    "other five intermediate keys",
+    "alternative certificate encodings",
+    "arbitrary custom JVM truststores",
+    "Janssen application-level outbound HTTP clients",
+    "OS and non-Java trust stores"
+  ]
+}
