@@ -22,5 +22,5 @@ jobs:
         run: |
           mkdir -p build
           javac --release 17 -d build src/TlsProbe.java
-      - name: Compare Janssen base images
+      - name: Report untested intermediate keys\n        run: |\n          python3 - <<'PY'\n          import json\n          with open('coverage.json') as f: coverage = json.load(f)\n          missing = [x['id'] for x in coverage['affected_intermediates'] if not x['live_fixture']]\n          print('Affected intermediate keys:', len(coverage['affected_intermediates']))\n          print('Keys with live fixtures:', len(coverage['affected_intermediates']) - len(missing))\n          print('Missing verified live fixtures:', ', '.join(missing))\n          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'], 'a') as out:\n              out.write('## eMudhra coverage\\n\\n')\n              out.write(f'Live fixtures: {8-len(missing)}/8 distinct intermediate keys.\\n\\n')\n              out.write('**Not full coverage.** Missing: ' + ', '.join(missing) + '\\n')\n          PY\n      - name: Compare Janssen base images
         run: bash scripts/check-images.sh
