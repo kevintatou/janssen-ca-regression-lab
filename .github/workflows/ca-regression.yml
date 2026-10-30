@@ -1,0 +1,26 @@
+name: Java CA regression
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tls-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile standalone TLS probe
+        run: |
+          mkdir -p build
+          javac --release 17 -d build src/TlsProbe.java
+      - name: Compare Janssen base images
+        run: bash scripts/check-images.sh
