@@ -28,10 +28,17 @@ jobs:
       - name: Compile standalone TLS probe
         run: |
           mkdir -p build
-          javac --release 17 -d build src/TlsProbe.java src/OfflineChainProbe.java
+          javac --release 17 -d build src/TlsProbe.java src/OfflineChainProbe.java src/HttpClientProbe.java
       - name: Verify authoritative certificate fingerprint manifest
         run: python3 scripts/verify_manifest.py
       - name: Offline PKIX chain coverage (16 fixtures, both image families)
         run: bash scripts/check-offline.sh
+      - name: Custom truststore regression (demonstrate unsafe override)
+        run: bash scripts/check-custom-truststore.sh
+      - name: JDK HttpClient outbound HTTPS (patched runtime)
+        run: |
+          image='bellsoft/liberica-openjdk-alpine:17.0.21@sha256:a16eb904aa472d560ff3fb6a77de0efc3482be938210d2caef0bd1f89c10d356'
+          docker run --rm -v "$PWD/build:/probe:ro" --entrypoint java "$image" -cp /probe HttpClientProbe reject https://dv-g3b-emudhra.we-have-a-problem.com/
+          docker run --rm -v "$PWD/build:/probe:ro" --entrypoint java "$image" -cp /probe HttpClientProbe accept https://example.com/
       - name: Compare Janssen base images
         run: bash scripts/check-images.sh
