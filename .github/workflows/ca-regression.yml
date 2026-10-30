@@ -18,11 +18,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Checkout researcher certificate fixtures (pinned revision)
+        uses: actions/checkout@v4
+        with:
+          repository: galadran/we-have-a-problem.com
+          ref: 05ebae9f2895478c514e25e221614cf5248750a4
+          path: upstream-chains
+          persist-credentials: false
       - name: Compile standalone TLS probe
         run: |
           mkdir -p build
-          javac --release 17 -d build src/TlsProbe.java
+          javac --release 17 -d build src/TlsProbe.java src/OfflineChainProbe.java
       - name: Verify authoritative certificate fingerprint manifest
         run: python3 scripts/verify_manifest.py
+      - name: Offline PKIX chain coverage (16 fixtures, both image families)
+        run: bash scripts/check-offline.sh
       - name: Compare Janssen base images
         run: bash scripts/check-images.sh
