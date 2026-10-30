@@ -46,3 +46,11 @@ This lab now checks six public chain fixtures (DV G3B, OV G3C, EV G3B, plus thei
 - Test actual Janssen-to-Entra flows in a **nonproduction** environment using authorized accounts and endpoints.
 
 The lab performs no intrusive testing against Entra or production Janssen installations.
+
+## Offline PKIX regression (pinned researcher fixtures)
+
+CI checks out `galadran/we-have-a-problem.com` at commit `05ebae9f2895478c514e25e221614cf5248750a4`, then exercises 14 regular chains (six affected TLS intermediate keys, two trust paths each, plus two no-CT variants) and two rollover chains. Both pinned patched BellSoft JDK and JRE images must reject every fixture using Java `CertPathBuilder` with the runtime's default trust anchors. The old images are diagnostic baselines.
+
+This is an **offline PKIX path-building check**, not a Janssen end-to-end test. It does not test revocation, HTTP-client hostname verification, arbitrary custom truststores, proxies, application-level TrustManagers, or every possible cross-signing/path-building variant. In particular, importing compromised roots or intermediates as explicit trust anchors can change the result. Production safety requires inspecting actual deployed truststore and TLS-client configuration.
+
+Upstream fixture provenance: https://github.com/galadran/we-have-a-problem.com/tree/05ebae9f2895478c514e25e221614cf5248750a4/chains
