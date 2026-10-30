@@ -38,6 +38,8 @@ jobs:
             jans-fido2/server/src/main/java/io/jans/fido2/service/readiness
       - name: Audit Janssen outbound TLS client implementations
         run: python3 scripts/audit-upstream-janssen.py upstream-jans
+      - name: Reproduce Janssen Apache HTTP connection manager lifecycle
+        run: mvn -q -f repro/pom.xml compile exec:java
       - name: Compile standalone TLS probe
         run: |
           mkdir -p build
