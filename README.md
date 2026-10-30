@@ -54,3 +54,39 @@ CI checks out `galadran/we-have-a-problem.com` at commit `05ebae9f2895478c514e25
 This is an **offline PKIX path-building check**, not a Janssen end-to-end test. It does not test revocation, HTTP-client hostname verification, arbitrary custom truststores, proxies, application-level TrustManagers, or every possible cross-signing/path-building variant. In particular, importing compromised roots or intermediates as explicit trust anchors can change the result. Production safety requires inspecting actual deployed truststore and TLS-client configuration.
 
 Upstream fixture provenance: https://github.com/galadran/we-have-a-problem.com/tree/05ebae9f2895478c514e25e221614cf5248750a4/chains
+
+
+## Janssen upstream contribution investigation
+
+The regression lab now checks selected Janssen source paths at pinned upstream revision
+`95f2eebb4bf725eae9415c5a8c69815dd92d4c80` (read-only sparse checkout).
+The static audit reviews:
+
+- `jans-core/service/.../BaseHttpService.java`: a trust-all HTTP client with disabled hostname verification, plus an explicit custom truststore client.
+- `jans-auth-server/client/.../ClientUtil.java`: a configurable TLS client using `NoopHostnameVerifier`.
+- `jans-fido2/server/.../WellKnownFetcher.java`: a separate Apache HTTP client path requiring targeted integration coverage.
+
+These are **potential bypasses**, not established exploitable vulnerabilities. The audit intentionally
+does not fail on their existence; upstream maintainers need call-site and reachability analysis.
+
+### Before submitting a Janssen pull request
+
+1. Trace callers of the trust-all and custom-truststore methods. Determine whether any
+   are reachable for user-controlled outbound HTTPS targets and under which settings.
+2. Add an isolated local HTTPS fixture with a known-good server certificate, an invalid
+   chain, and a hostname mismatch. Exercise **the actual Janssen HTTP client factories**
+   rather than only JDK `HttpClient`.
+3. Demonstrate failure before the proposed fix and success afterward, including proxy
+   and explicit truststore configurations. Never test employer or production endpoints.
+4. Propose the narrowest compatible upstream change and unit tests under Janssen's
+   existing test modules. Follow Janssen's contribution guide and coordinate with
+   [the existing eMudhra PR](https://github.com/JanssenProject/jans/pull/15521).
+5. Run upstream Maven tests and this lab's GitHub Actions. Request review before merge.
+
+### What this lab does not establish
+
+It does not execute a complete Janssen deployment, validate production truststores,
+exercise all Apache HTTP client factory paths, or verify Kubernetes service-mesh/egress
+proxy TLS behavior. A green CI result **must not** be presented as a deployment security
+certification. The custom truststore regression only covers the specific fixture and
+trust anchor it creates.
