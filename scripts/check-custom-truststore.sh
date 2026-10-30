@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Controlled demonstration: adding an incident root as a custom trust anchor can
+# Controlled demonstration: adding an incident intermediate as a custom trust anchor can
 # defeat the patched runtime's default CA removal. Never use this truststore in production.
 fixture="upstream-chains/chains/regular/dv-g3b-emudhra.we-have-a-problem.com.pem"
 tmp="$(mktemp -d)"
@@ -11,7 +11,7 @@ certs = re.findall(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', p
 assert len(certs) >= 3, "Expected a complete chain"
 pathlib.Path(sys.argv[2]).write_text(certs[-1] + "\n")
 PY
-keytool -importcert -noprompt -trustcacerts -alias incident-root -file "$tmp/incident-anchor.pem" -keystore "$tmp/unsafe.p12" -storetype PKCS12 -storepass changeit >/dev/null 2>&1
+keytool -importcert -noprompt -trustcacerts -alias incident-intermediate -file "$tmp/incident-anchor.pem" -keystore "$tmp/unsafe.p12" -storetype PKCS12 -storepass changeit >/dev/null 2>&1
 mkdir -p "$tmp/fixtures"
 cp "$fixture" "$tmp/fixtures/chain.pem"
 for image in \
