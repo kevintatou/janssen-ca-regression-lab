@@ -9,7 +9,7 @@ python3 - "$fixture" "$tmp/incident-anchor.pem" <<'PY'
 import pathlib, re, sys
 certs = re.findall(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', pathlib.Path(sys.argv[1]).read_text(), re.S)
 assert len(certs) >= 3, "Expected a complete chain"
-pathlib.Path(sys.argv[2]).write_text(certs[-1] + "\n")
+pathlib.Path(sys.argv[2]).write_text(certs[1] + "\n")
 PY
 keytool -importcert -noprompt -trustcacerts -alias incident-intermediate -file "$tmp/incident-anchor.pem" -keystore "$tmp/unsafe.p12" -storetype PKCS12 -storepass changeit >/dev/null 2>&1
 mkdir -p "$tmp/fixtures"
