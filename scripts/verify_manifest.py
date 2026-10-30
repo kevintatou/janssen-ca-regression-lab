@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Verify 16 certificate fingerprints against Apple's published TLS blocklist.
+
+The two code-signing intermediates are separate and are NOT TLS fixtures.
+This checks metadata integrity, not Java runtime rejection of every chain.
+"""
+import json
+from pathlib import Path
+
+EXPECTED = {
+"ev-g3b":("E7568FE6E12331F4FD7DE61DA4C7559D0F8EB192A218D4741A3BA75184333838","579480AEA166290BD3C643589E795FC0D0E54E86505D180F1DFF99EFD3199512"),
+"ov-g3b":("98B896625C0C230ADEEC3EB2CF6AAD5001ECF9156A68644E82374CE5833BC25B","5F1DED4DD590AF74631290CF073B122A2AAC6A1FA479778A0BD43579BD832699"),
+"dv-g3b":("42C4ACCD12C4F59597925E1A08A7A90102608543809308D50EC427E118BA1493","45A883F349AEDFD5F3A649B5498FFB121712BA8B448F3F2A91DBC5A766FCDDBE"),
+"ev-g3c":("432EC25F0D28DE9006D97BF752F17BBB2CD41F669933FCB072D9A1148D0261F3","FD9D5C2DBBD4995AB69B8D50C439D9527B00529199C2FD01B2174EB58F07021F"),
+"ov-g3c":("CB6E15165AC802E9B3F993F16C25D41F4E81C21EBDE71AE1B012AC00BF9C7C3F","7485B51C0ED192878FA1D2F948FB529AE1842CC5086C4B67F7BE5B2039DE9489"),
+"dv-g3c":("0164D7CEAE5BB909C272AF151FF44B1177AE9B47D9424B94F1D9558C30934D19","62B7F9868263F72F6911FC78CEAF72C1979158B7368BF648683BB2AA39B02E72"),
+}
+def main():
+    path = Path("certificates/known-compromised.json")
+    data = json.loads(path.read_text())
+    assert data["source"] == "https://support.apple.com/en-us/149555"
+    assert set(data["tls_intermediates"]) == set(EXPECTED)
+    for key, pair in EXPECTED.items():
+        actual = data["tls_intermediates"][key]
+        assert actual["emudhra_sha256"] == pair[0], key
+        assert actual["sectigo_sha256"] == pair[1], key
+        assert len(actual["emudhra_sha256"]) == 64
+    print("PASS: 12 TLS certificate fingerprints match Apple's published blocklist")
+    print("NOTE: fingerprint metadata is NOT equivalent to 12 TLS handshake tests.")
+if __name__ == "__main__":
+    main()
