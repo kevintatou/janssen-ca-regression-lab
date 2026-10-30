@@ -20,10 +20,10 @@ for image in \
   echo "=== Patched runtime, default truststore: MUST reject ==="
   docker run --rm -v "$PWD/build:/probe:ro" -v "$tmp/fixtures:/fixtures:ro" --entrypoint java "$image" \
     -cp /probe OfflineChainProbe reject /fixtures/chain.pem
-  echo "=== Patched runtime, deliberately unsafe truststore: demonstrate exposure ==="
+  echo "=== Patched runtime, custom intermediate truststore: check whether CA constraints still reject ==="
   docker run --rm -v "$PWD/build:/probe:ro" -v "$tmp/fixtures:/fixtures:ro" -v "$tmp/unsafe.p12:/unsafe.p12:ro" \
     --entrypoint java "$image" -Djavax.net.ssl.trustStore=/unsafe.p12 \
     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=PKCS12 \
-    -cp /probe OfflineChainProbe accept /fixtures/chain.pem
+    -cp /probe OfflineChainProbe reject /fixtures/chain.pem
 done
-echo "PASS: patched runtimes reject by default; unsafe custom truststores can restore trust."
+echo "PASS: patched runtimes reject the incident chain with default and custom intermediate truststores. This does not certify arbitrary custom truststores."
