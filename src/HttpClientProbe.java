@@ -9,7 +9,8 @@ public final class HttpClientProbe {
   public static void main(String[] args) throws Exception {
     if (args.length != 2) System.exit(2);
     boolean reject = args[0].equals("reject");
-    try (HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build()) {
+    try {
+      HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
       client.send(HttpRequest.newBuilder(URI.create(args[1])).GET().build(),
         HttpResponse.BodyHandlers.discarding());
       System.out.println("HTTP_CLIENT_TLS_ACCEPTED " + args[1]);
